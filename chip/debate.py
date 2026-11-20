@@ -4,30 +4,43 @@ round 4 attack the opponent's final design. Solo designers get two turns. The ju
 the smallest final design that passes the judge and survives the opponent's round-4 attack wins.
 
   python -m debaterl.chip.debate --out runs/1 [--model claude-fable-5-2] [--effort high] [--solo 2] [--minutes 25]
+                                  [--budget perf=1500,offset=1500]   each designer simulates through a meter on this budget
 """
 import argparse, json, os, queue, signal, subprocess, sys, threading, time, uuid
 from concurrent.futures import ThreadPoolExecutor
 import anthropic
+from debaterl import meter
 from debaterl.chip import judge
 
 PY = sys.executable
 TOOLS = [{"type": "bash_20250124", "name": "bash"}]
 CMD_TIMEOUT, MAX_OUT = 600, 30000
 
-TASK = f"""# Task: size a two-stage Miller op-amp (fixed topology)
+LOCAL_TOOLS = f"""Tools (shared simulator, deterministic):
+  {PY} -m debaterl.chip.sim <design.json> --process TT|FF|SS --temp <C> --vdd <V>
+      performance at one operating point: gain_db, gbw_hz, pm_deg, power_w, area_um2, pass, failures (~15 ms per run)
+  {PY} -m debaterl.chip.sim <design.json> --seed <S>
+      input-referred offset (offset_v) of mismatch sample S at TT, 27 C, 1.8 V
+  You may also import the module (from debaterl.chip import sim) and call sim.simulate(p, process, temp, vdd)
+  and sim.offset(p, seed) directly. {PY} has numpy and scipy."""
+
+METERED_TOOLS = f"""Tools (metered simulator, deterministic):
+  {PY} -m debaterl chip sim <design.json> --process TT|FF|SS --temp <C> --vdd <V>
+      performance at one operating point: gain_db, gbw_hz, pm_deg, power_w, area_um2, pass, failures (costs 1 perf)
+  {PY} -m debaterl chip sim <design.json> --seed <S>
+      input-referred offset (offset_v) of mismatch sample S at TT, 27 C, 1.8 V (costs 1 offset)
+  {PY} -m debaterl meter budget
+      what is left of your budget: @BUDGET@ for the whole run, including any checks of another designer's design
+  A command that would overdraw the budget is refused. Simulate only through these commands. {PY} has numpy and scipy."""
+
+TASK = """# Task: size a two-stage Miller op-amp (fixed topology)
 
 You choose only the numbers in a design file (JSON):
 W1 L1 (input pair, um), W3 L3 (PMOS mirror load), W5 L5 (tail current source), W6 L6 (second-stage PMOS),
 W7 L7 (second-stage NMOS current sink), W8 L8 (bias diode), Ib (bias current, uA), Cc (compensation cap, pF), Rz (nulling resistor, ohm).
 Bounds: every W in [0.5, 200] um, every L in [0.18, 10] um, Ib in [1, 200] uA, Cc in [0.5, 10] pF, Rz in [0, 100000] ohm.
 
-Tools (shared simulator, deterministic):
-  {PY} -m debaterl.chip.sim <design.json> --process TT|FF|SS --temp <C> --vdd <V>
-      performance at one operating point: gain_db, gbw_hz, pm_deg, power_w, area_um2, pass, failures (~15 ms per run)
-  {PY} -m debaterl.chip.sim <design.json> --seed <S>
-      input-referred offset (offset_v) of mismatch sample S at TT, 27 C, 1.8 V
-  You may also import the module (from debaterl.chip import sim) and call sim.simulate(p, process, temp, vdd)
-  and sim.offset(p, seed) directly. {PY} has numpy and scipy.
+@TOOLS@
 
 Mismatch model: sample S draws z = numpy.random.default_rng(S).standard_normal(8), one value per transistor in the order
 M1, M2 (input pair), M3, M4 (mirror), M5 (tail), M6, M7 (second stage), M8 (bias diode). Each transistor's threshold
@@ -93,12 +106,12 @@ sentence on what you checked."""
 
 
 class Shell:
-  def __init__(self, cwd):
-    self.cwd, self.p = cwd, None
+  def __init__(self, cwd, env=None):
+    self.cwd, self.env, self.p = cwd, env, None
 
   def start(self):
     self.p = subprocess.Popen(["bash", "--noprofile", "--norc"], cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT, text=True, bufsize=1, start_new_session=True)
+                              stderr=subprocess.STDOUT, text=True, bufsize=1, start_new_session=True, env=self.env)
     self.q = queue.Queue()
     threading.Thread(target=lambda p=self.p, q=self.q: [q.put(line) for line in p.stdout], daemon=True).start()
 
@@ -129,10 +142,10 @@ class Shell:
 
 
 class Agent:
-  def __init__(self, name, folder, client, model, effort):
+  def __init__(self, name, folder, client, model, effort, env=None):
     os.makedirs(folder, exist_ok=True)
     self.name, self.dir, self.client, self.model, self.effort = name, folder, client, model, effort
-    self.shell, self.messages, self.usage = Shell(folder), [], {}
+    self.shell, self.messages, self.usage = Shell(folder, env), [], {}
     self.system = SYSTEM.format(py=PY, dir=folder, t=CMD_TIMEOUT // 60)
     self.log = open(os.path.join(folder, "transcript.jsonl"), "a")
 
@@ -226,17 +239,21 @@ def attacked(r):
   return "confirmed failures: " + json.dumps([{k: x.get(k) for k in keys if k in x} for x in r["confirmed"]])
 
 
-def run(out, model="claude-fable-5-2", effort="high", solo=2, minutes=25):
+def run(out, model="claude-fable-5-2", effort="high", solo=2, minutes=25, budget=None):
   out = os.path.abspath(out)
   os.makedirs(out, exist_ok=True)
   task = os.path.join(out, "TASK.md")
-  open(task, "w").write(TASK)
+  open(task, "w").write(TASK.replace("@TOOLS@", METERED_TOOLS.replace("@BUDGET@", budget) if budget else LOCAL_TOOLS))
   judge.all_z()
   client = anthropic.Anthropic(max_retries=5)
   names = ["A", "B"] + [f"S{i + 1}" for i in range(solo)]
-  ag = {n: Agent(n, os.path.join(out, n), client, model, effort) for n in names}
+  env = {}
+  if budget:
+    meter.start(os.path.join(out, "meter"), names, budget)
+    env = {n: {**os.environ, **v} for n, v in meter.env(os.path.join(out, "meter")).items()}
+  ag = {n: Agent(n, os.path.join(out, n), client, model, effort, env.get(n)) for n in names}
   opp, later = {"A": "B", "B": "A"}, round(minutes * 0.8)
-  led = {"model": model, "effort": effort, "events": []}
+  led = {"model": model, "effort": effort, "budget": budget, "events": []}
 
   def ctx(n, **k):
     return dict(me=n, opp=opp.get(n), dir=ag[n].dir, task=task, cores=os.cpu_count(), others=len(names) - 1, **k)
@@ -329,8 +346,9 @@ def main(argv=None):
   ap.add_argument("--effort", default="high")
   ap.add_argument("--solo", type=int, default=2)
   ap.add_argument("--minutes", type=int, default=25, help="time asked for in round 1; later rounds get 80%%")
+  ap.add_argument("--budget", help="KIND=N,... per designer (perf=1500,offset=1500): simulate only through a meter")
   a = ap.parse_args(argv)
-  run(a.out, a.model, a.effort, a.solo, a.minutes)
+  run(a.out, a.model, a.effort, a.solo, a.minutes, a.budget)
 
 
 if __name__ == "__main__":

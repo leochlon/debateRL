@@ -150,14 +150,18 @@ def simulate(p, process="TT", temp=27.0, vdd=1.8):
   return r
 
 
-def main(argv=None):
+def parser():
   ap = argparse.ArgumentParser()
   ap.add_argument("design")
   ap.add_argument("--process", default="TT")
   ap.add_argument("--temp", type=float, default=27.0)
   ap.add_argument("--vdd", type=float, default=1.8)
   ap.add_argument("--seed", type=int, default=None, help="mismatch sample: report the input offset at TT, 27 C, 1.8 V")
-  a = ap.parse_args(argv)
+  return ap
+
+
+def main(argv=None):
+  a = parser().parse_args(argv)
   d = json.load(open(a.design))
   print(json.dumps(offset(d, a.seed) if a.seed is not None else simulate(d, a.process, a.temp, a.vdd)))
 

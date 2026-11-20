@@ -10,9 +10,11 @@ attack results); agents' free-text replies are logged, never relayed. Official j
   debaterl debate PROBLEM no RUN R                     print NO's message
   debaterl debate PROBLEM judge-no RUN R               official run of NO's round-R attack; records the outcome
 
-PROBLEM is hip (the bracket) or actuator. RUN starts with baseline_r0.py (actuator: baseline_r0.json).
+PROBLEM is hip (the bracket) or actuator. RUN starts with baseline_r0.py (actuator: baseline_r0.json). With a meter serving
+in RUN/meter (debaterl meter serve RUN/meter --names yes,no --budget scenarios=N), each side simulates on its budget.
 """
 import argparse, datetime, json, os, shutil, subprocess, sys
+from debaterl import meter
 from debaterl.helpers import save
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -111,6 +113,10 @@ against you. You have a hard limit of {minutes} minutes: at the deadline the jud
 and you are stopped, so write your best scenarios early and improve them. Reply with the file and one sentence per
 scenario."""
 
+METERED = ("Every simulation goes through the meter, against your budget for the whole debate ({left} left now): `check` costs\n"
+           "36 scenarios, `run` one per scenario, a scenario motive 2, anything else nothing. A command that would overdraw the\n"
+           "budget is refused; `debaterl meter budget` shows what is left.\n")
+
 HOW = ("Check the design with `{cli} check` (it must pass) and the motive with `{cli} motive`, because the judge runs\n"
        "exactly these.")
 
@@ -137,7 +143,7 @@ def cache(side):
 def judge(P, *args):
   """An official judge call (local, or on DEBATERL_HOST). A judge that does not answer stops the step: nothing is recorded."""
   p = subprocess.run([sys.executable, "-m", "debaterl", P["judge"], *args], capture_output=True, text=True,
-                     env={**os.environ, "DEBATERL_CACHE": cache("official")})
+                     env={**os.environ, "DEBATERL_CACHE": cache("official"), "DEBATERL_METER": ""})
   try:
     return json.loads(p.stdout)
   except ValueError:
@@ -157,10 +163,14 @@ def rules(P, side, run):
   env = f"DEBATERL_CACHE={cache(side)}" + (f" DEBATERL_HOST={host}" if host else "")
   remote = (f", or by ssh to {host} ({os.environ.get('DEBATERL_REMOTE_PYTHON', '~/debateRL/.venv/bin/python')} -m debaterl, in a "
             "directory of your own under /tmp there)") if host else ""
+  metered, state = "", os.path.join(run, "meter")
+  if os.path.exists(os.path.join(state, "url.txt")):
+    env, remote = " ".join(f"{k}={v}" for k, v in meter.env(state)[side].items()), ""
+    metered = METERED.format(left=", ".join(f"{n} {k}" for k, n in meter.books(state)[side]["left"].items()))
   run_rules = (f"Run all simulation through debaterl, with {env} in front of every command{remote}. Do not install packages\n"
                "or run simulations any other way, keep local files inside your folder, and do not change them after replying: the\n"
                "judge reads them as soon as you reply.")
-  return P["rules"].format(cli=f"debaterl {P['judge']}", src=HERE, run_rules=run_rules)
+  return P["rules"].format(cli=f"debaterl {P['judge']}", src=HERE, run_rules=metered + run_rules)
 
 
 def clock(minutes):

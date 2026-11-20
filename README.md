@@ -8,7 +8,7 @@ by Hassana Labs
 
 <h3>
 
-[How it works](#how-it-works) | [Install](#install) | [Quick start](#quick-start) | [Problems](#problems) | [Citation](#citation)
+[How it works](#how-it-works) | [Install](#install) | [Quick start](#quick-start) | [Problems](#problems) | [Meter](#meter) | [Citation](#citation)
 
 </h3>
 
@@ -77,6 +77,7 @@ CalculiX processes of about 1 GB each.
 | `DEBATERL_WORKERS` | CPU count | parallel judge processes |
 | `DEBATERL_HOST` | unset | ssh destination: judge commands run there |
 | `DEBATERL_REMOTE_PYTHON` | `~/debateRL/.venv/bin/python` | Python on that host, with the package installed |
+| `DEBATERL_METER`, `DEBATERL_TOKEN` | unset | judge commands go through the [meter](#meter), on that token's budget |
 
 ## Problems
 
@@ -104,11 +105,35 @@ debaterl chip sim design.json --process SS --temp 125 --vdd 1.7
 
 The judge builds the one-million-seed mismatch table in `DEBATERL_CACHE` on first use.
 
+## Meter
+
+Puts agents on a simulation budget. Each agent gets a token and, for the whole run, a budget per kind. A judge command
+costs what it asks to simulate, a command that would overdraw a budget is refused whole, a command that fails is not
+charged, and every call is logged with its files to `STATE/log/NAME.jsonl`.
+
+| command | costs |
+|---|---|
+| `hip check`, `actuator check` | 36 scenarios |
+| `hip run`, `actuator run` | one scenario per scenario |
+| `hip motive`, `actuator motive` | 2 scenarios for a scenario motive, otherwise nothing |
+| `hip contact` | one scenario per move and variant |
+| `hip geometry` | nothing |
+| `chip sim` | 1 perf (an operating point) or 1 offset (a mismatch seed) |
+| `chip judge` | 105 perf and 1009 offset; an attack, its points and seeds |
+
+```sh
+debaterl meter serve RUN/meter --names yes,no --budget scenarios=300 &   # the hip and actuator debates pick it up
+debaterl chip debate --out runs/chip1 --budget perf=1500,offset=1500     # starts its own meter
+DEBATERL_METER=$(cat RUN/meter/url.txt) DEBATERL_TOKEN=... debaterl hip check design.py
+debaterl meter budget
+```
+
 ## Layout
 
 ```
 __main__.py        the debaterl command; ssh runner
 helpers.py         settings, design build cache, B-rep helpers, gait curves, parallel cached runs
+meter.py           simulation budgets: tokens, a budget per kind, the call log; judge commands go through it
 cad/
   fem.py           linear FEA: gmsh tet10 mesh, CalculiX unit cases, superposition, rigid seat fit
   debate.py        the YES/NO protocol: rules, round messages, judge steps, ledger

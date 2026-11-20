@@ -5,12 +5,15 @@
   debaterl debate PROBLEM start|yes|judge-yes|no|judge-no RUN [ROUND]     (debaterl debate -h)
   debaterl validate                  the FEA against closed-form answers
   debaterl chip sim|judge|debate ARGS   the op-amp contest, chip/MODULE.py   (debaterl chip MODULE -h)
+  debaterl meter serve|budget ...       simulation budgets per agent           (debaterl meter -h)
 
 Judge output is JSON on stdout. With DEBATERL_HOST set (an ssh destination) judge commands run there: the file arguments
 are copied over and run with `DEBATERL_REMOTE_PYTHON -m debaterl` (default ~/debateRL/.venv/bin/python, a Python with this
 package installed). DEBATERL_CACHE (default ~/.cache/debaterl) and DEBATERL_WORKERS apply on the machine that runs the judge.
+With DEBATERL_METER and DEBATERL_TOKEN set, judge commands go through the meter instead, on that agent's budget.
 """
 import importlib, json, os, shlex, subprocess, sys, uuid
+from debaterl import meter
 
 JUDGES = {"hip": "debaterl.cad.hip_judge", "actuator": "debaterl.cad.hip_actuator"}
 CHIP = ("sim", "judge", "debate")
@@ -57,6 +60,10 @@ def judge(prob, cmd, args):
 
 def main(argv=None):
   a = sys.argv[1:] if argv is None else argv
+  if a[:1] == ["meter"]:
+    return meter.main(a[1:])
+  if os.environ.get("DEBATERL_METER") and a[1:2] and a[1] in meter.COMMANDS.get(a[0], ()):
+    return meter.call(a)
   if a[:1] == ["debate"]:
     from debaterl.cad import debate
     return debate.main(a[1:])

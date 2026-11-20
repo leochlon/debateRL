@@ -193,13 +193,17 @@ def check(path, scenarios=None, act_path=None, variants=("free",), export=None):
           "failing_conditions": [dict(todo)[n] for n in failing], "mass_g": info["mass_g"], "face_nodes": len(m["fi"]), "worst": worst, "rows": rows}
 
 
-def cli(args):
+def parser():
   ap = argparse.ArgumentParser(prog="debaterl hip contact")
   ap.add_argument("design")
   ap.add_argument("scenarios", nargs="?")
   ap.add_argument("--actuator")
   ap.add_argument("--variants", default="free")
   ap.add_argument("--export", help="write the worst free-variant instant's surface stress field here")
-  a = ap.parse_args(args)
+  return ap
+
+
+def cli(args):
+  a = parser().parse_args(args)
   sc = json.load(open(a.scenarios)) if a.scenarios else None
   return check(a.design, sc if sc is None or isinstance(sc, list) else [sc], a.actuator, tuple(a.variants.split(",")), a.export)

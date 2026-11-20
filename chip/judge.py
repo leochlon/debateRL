@@ -18,6 +18,8 @@ VDDS = [1.7, 1.75, 1.8, 1.85, 1.9]
 GRID = [(p, t, v) for p in ("TT", "FF", "SS") for t in TEMPS for v in VDDS]
 POOL = ThreadPoolExecutor(WORKERS)  # ngspice runs are subprocesses, so threads are enough
 ZFILE = os.path.join(CACHE, "chip", "mismatch_z.npy")
+TOP = 1000
+MAX_POINTS, MAX_SEEDS = 3, 5
 
 
 def all_z():
@@ -57,7 +59,7 @@ def sensitivities(design, h=1e-3):
   return base, list(POOL.map(one, sim.DEVICES))
 
 
-def offset_tail(design, top=1000):
+def offset_tail(design, top=TOP):
   if errs := sim.check_bounds(design):
     return {"pass": False, "failures": errs}
   base, s = sensitivities(design)
@@ -81,18 +83,22 @@ def score(design):
 
 
 def attack(design, a):
-  pts = [p if isinstance(p, dict) else dict(zip(("process", "temp", "vdd"), p)) for p in (a.get("points") or [])[:3]]
-  seeds = (a.get("seeds") or [])[:5]
+  pts = [p if isinstance(p, dict) else dict(zip(("process", "temp", "vdd"), p)) for p in (a.get("points") or [])[:MAX_POINTS]]
+  seeds = (a.get("seeds") or [])[:MAX_SEEDS]
   res = list(POOL.map(lambda p: sim.simulate(design, str(p["process"]), float(p["temp"]), float(p["vdd"])), pts))
   res += list(POOL.map(lambda s: sim.offset(design, int(s)), seeds))
   return {"confirmed": [r for r in res if not r["pass"] and not outside(r)], "rejected": [r for r in res if r["pass"] or outside(r)]}
 
 
-def main(argv=None):
+def parser():
   ap = argparse.ArgumentParser()
   ap.add_argument("design")
   ap.add_argument("--attack", help="attack.json: verify these counterexamples instead of scoring the design")
-  a = ap.parse_args(argv)
+  return ap
+
+
+def main(argv=None):
+  a = parser().parse_args(argv)
   d = json.load(open(a.design))
   print(json.dumps(attack(d, json.load(open(a.attack))) if a.attack else score(d), indent=1, default=float))
 
