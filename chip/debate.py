@@ -3,6 +3,10 @@ folder. Round 1 design; round 2 attack the opponent's design (and optionally sub
 round 4 attack the opponent's final design. Solo designers get two turns. The judge checks every claim by simulation;
 the smallest final design that passes the judge and survives the opponent's round-4 attack wins.
 
+Without ANTHROPIC_API_KEY, whoever launched the debate runs the designers instead (as subagents, say): each turn's message
+is written to the designer's folder as turnK.md, and the turn ends when the launcher saves the reply next to it as
+turnK.reply, or at the hard stop.
+
   python -m resips.chip.debate --out runs/1 [--model claude-fable-5-2] [--effort high] [--solo 2] [--minutes 25]
                                 [--budget perf=1500,offset=1500]   each designer simulates through a meter on this budget
 """
@@ -201,6 +205,31 @@ class Agent:
       return f"[API error: {type(e).__name__}: {e}]"
 
 
+class Mailbox:
+  """A designer run by whoever launched the debate, through turnK.md and turnK.reply in its folder."""
+
+  def __init__(self, name, folder, env=None):
+    os.makedirs(folder, exist_ok=True)
+    self.name, self.dir, self.shell, self.usage, self.k = name, folder, None, {}, 0
+    self.prefix = " ".join(f"{k}={v}" for k, v in (env or {}).items())
+
+  def turn(self, prompt, minutes):
+    self.k += 1
+    if self.k > 1:
+      prompt = f"You are designer {self.name}; your earlier messages are in {self.dir}/turn*.md.\n\n" + prompt
+    if self.prefix:
+      prompt += f"\n\nPut {self.prefix} in front of every {PY} -m resips command."
+    msg, reply = (os.path.join(self.dir, f"turn{self.k}.{x}") for x in ("md", "reply"))
+    open(msg, "w").write(prompt)
+    end = time.time() + 90 * minutes
+    print(f"turn {self.name} {self.k}: {msg}, reply to {reply} by {time.strftime('%H:%M:%S', time.gmtime(end))} UTC", flush=True)
+    while not os.path.exists(reply):
+      if time.time() > end:
+        return "[no reply by the hard stop]"
+      time.sleep(2)
+    return open(reply).read()
+
+
 def load(path):
   try:
     return json.load(open(path))
@@ -245,13 +274,16 @@ def run(out, model="claude-fable-5-2", effort="high", solo=2, minutes=25, budget
   task = os.path.join(out, "TASK.md")
   open(task, "w").write(TASK.replace("@TOOLS@", METERED_TOOLS.replace("@BUDGET@", budget) if budget else LOCAL_TOOLS))
   judge.all_z()
-  client = anthropic.Anthropic(max_retries=5)
   names = ["A", "B"] + [f"S{i + 1}" for i in range(solo)]
   env = {}
   if budget:
     meter.start(os.path.join(out, "meter"), names, budget)
-    env = {n: {**os.environ, **v} for n, v in meter.env(os.path.join(out, "meter")).items()}
-  ag = {n: Agent(n, os.path.join(out, n), client, model, effort, env.get(n)) for n in names}
+    env = meter.env(os.path.join(out, "meter"))
+  if os.environ.get("ANTHROPIC_API_KEY"):
+    client = anthropic.Anthropic(max_retries=5)
+    ag = {n: Agent(n, os.path.join(out, n), client, model, effort, {**os.environ, **env.get(n, {})}) for n in names}
+  else:
+    ag = {n: Mailbox(n, os.path.join(out, n), env.get(n)) for n in names}
   opp, later = {"A": "B", "B": "A"}, round(minutes * 0.8)
   led = {"model": model, "effort": effort, "budget": budget, "events": []}
 
@@ -334,7 +366,8 @@ def run(out, model="claude-fable-5-2", effort="high", solo=2, minutes=25, budget
   led.update(final=final, winner=best(final, opp), best_solo=best(final, [n for n in names if n not in opp]), usage={n: ag[n].usage for n in names})
   note(None, "end")
   for a in ag.values():
-    a.shell.kill()
+    if a.shell:
+      a.shell.kill()
   print(json.dumps({"final": final, "winner": led["winner"], "best_solo": led["best_solo"]}, indent=1))
   return led
 
@@ -342,8 +375,8 @@ def run(out, model="claude-fable-5-2", effort="high", solo=2, minutes=25, budget
 def main(argv=None):
   ap = argparse.ArgumentParser()
   ap.add_argument("--out", required=True)
-  ap.add_argument("--model", default="claude-fable-5-2")
-  ap.add_argument("--effort", default="high")
+  ap.add_argument("--model", default="claude-fable-5-2", help="the designers' model: called with a key, recorded either way")
+  ap.add_argument("--effort", default="high", help="the designers' effort: used with a key, recorded either way")
   ap.add_argument("--solo", type=int, default=2)
   ap.add_argument("--minutes", type=int, default=25, help="time asked for in round 1; later rounds get 80%%")
   ap.add_argument("--budget", help="KIND=N,... per designer (perf=1500,offset=1500): simulate only through a meter")

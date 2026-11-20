@@ -10,7 +10,7 @@ by Hassana Labs
 
 <h3>
 
-[How it works](#how-it-works) | [Install](#install) | [Quick start](#quick-start) | [Problems](#problems) | [Meter](#meter) | [Citation](#citation)
+[How it works](#how-it-works) | [Install](#install) | [Problems](#problems) | [Meter](#meter) | [Citation](#citation)
 
 </h3>
 
@@ -57,30 +57,6 @@ resips validate                      # FEA against closed-form answers
 
 The repository root is the `resips` package, so it runs once installed.
 
-## Quick start
-
-```sh
-resips hip geometry design.py                   # scenario-free claims, mass, stop angles (~10 s)
-resips hip check design.py                      # every claim on the 36-scenario grid
-resips hip run design.py scenarios.json         # a list of scenarios (an attack)
-resips hip motive baseline.py design.py m.json  # two-sided test of a change
-resips hip contact design.py                    # push-only belt clamp at the three hardest moves (slow)
-resips actuator check spec.json
-
-resips debate hip start RUN                     # then yes, judge-yes, no, judge-no for each round
-```
-
-Output is JSON. Runs are deterministic: gmsh and CalculiX run single-threaded per process, and an FEA solve runs six
-CalculiX processes of about 1 GB each.
-
-| variable | default | |
-|---|---|---|
-| `RESIPS_CACHE` | `~/.cache/resips` | results cached by design file hash |
-| `RESIPS_WORKERS` | CPU count | parallel judge processes |
-| `RESIPS_HOST` | unset | ssh destination: judge commands run there |
-| `RESIPS_REMOTE_PYTHON` | `~/resips/.venv/bin/python` | Python on that host, with the package installed |
-| `RESIPS_METER`, `RESIPS_TOKEN` | unset | judge commands go through the [meter](#meter), on that token's budget |
-
 ## Problems
 
 ### Hip exoskeleton (`cad/`)
@@ -95,12 +71,14 @@ check, judge-confirmed attacks) and snapshots both sides' files before judging t
 ### Op-amp (`chip/`)
 
 Size a fixed two-stage Miller op-amp (15 numbers) for the smallest area that meets a PVT spec and keeps |offset| <= 3 mV
-over a million mismatch seeds, in ngspice. `chip/debate.py` runs the agents itself through the Anthropic API, one bash
-shell each: debaters A and B design, attack each other's design with failing operating points or seeds, revise and
-attack again, while solo designers work alone for comparison.
+over a million mismatch seeds, in ngspice. Debaters A and B design, attack each other's design with failing operating
+points or seeds, revise and attack again, while solo designers work alone for comparison. With `ANTHROPIC_API_KEY` set,
+`chip/debate.py` runs the agents itself through the API, one bash shell each. Without it, whoever launched the debate
+runs them (as subagents, say): each turn's message is written to the designer's folder as `turnK.md`, and the turn ends
+when the reply is saved next to it as `turnK.reply`.
 
 ```sh
-resips chip debate --out runs/chip1 [--solo 2]  # needs ANTHROPIC_API_KEY
+resips chip debate --out runs/chip1 [--solo 2]
 resips chip judge design.json [--attack a.json]
 resips chip sim design.json --process SS --temp 125 --vdd 1.7
 ```
@@ -151,7 +129,7 @@ cad/
 chip/
   sim.py           op-amp netlist and device model: one operating point, or the offset of one mismatch seed
   judge.py         105-point PVT grid, million-seed offset screen, attacks
-  debate.py        agent harness (Anthropic API, bash): two debaters plus solo designers
+  debate.py        the debate, two debaters plus solo designers: agents through the API, or run by the launcher
 ```
 
 ## Citation
