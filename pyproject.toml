@@ -1,0 +1,35 @@
+[project]
+name = "debateRL"
+version = "0.1.0"
+description = "Physics judges for design debates between AI agents: OpenCASCADE geometry, MuJoCo, ngspice and CalculiX"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = ["anthropic", "build123d", "gmsh", "mujoco", "numpy>=2", "scipy"]
+
+[project.scripts]
+debaterl = "debaterl.__main__:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"debaterl" = "."}  # the repository root is the package
+packages = ["debaterl", "debaterl.cad", "debaterl.chip"]
+package-data = {"debaterl.cad" = ["*.json"]}
+
+[tool.ruff]
+indent-width = 2
+line-length = 150
+preview = true
+target-version = "py312"
+exclude = ["cad/hip_bracket.py"]
+
+[tool.ruff.lint]
+select = ["F", "W6", "E71", "E72", "E112", "E113", "E203", "E272", "E275", "E303", "E304", "E501", "E702", "E703", "E731", "W191", "W291",
+          "W293", "UP039", "C416", "RET506", "RET507", "A", "FURB110", "RUF018"]
+
+[tool.ruff.format]
+exclude = ["*"]

@@ -1,0 +1,292 @@
+{
+ "part": "right hip bracket of a hip exoskeleton: bolts to the waist belt at its top and carries the hip actuator stator at its bottom; the thigh link turns on the actuator output, on the body side of the bracket",
+ "frame": "mm. x lateral (outward from the body), y anterior, z up. Origin at the centre of the two belt bolts, on the belt contact face (x=0). Hip flexion is a positive rotation about +x (theta=0: link points down; positive moves it anterior).",
+ "design_file": "Python file defining AXIS=(y,z) of the actuator axis in mm, BUILD_DIR (print layer normal: one of +x,-x,+y,-y,+z,-z) and build() returning one build123d solid in this frame. Nothing else is read.",
+ "material": {
+  "name": "printed PA6-CF, 100% infill (ASSUMED values, not from a datasheet)",
+  "E_MPa": 3500.0,
+  "nu": 0.35,
+  "density_g_cm3": 1.18,
+  "strength_inplane_MPa": 70.0,
+  "strength_interlayer_MPa": 35.0
+ },
+ "printer_bed_mm": {
+  "xy": [
+   250,
+   210
+  ],
+  "z": 220
+ },
+ "geometry": {
+  "axis_bounds": {
+   "y": [
+    -15.0,
+    15.0
+   ],
+   "z": [
+    -115.0,
+    -75.0
+   ]
+  },
+  "belt_bolts": {
+   "yz": [
+    [
+     -20.0,
+     0.0
+    ],
+    [
+     20.0,
+     0.0
+    ]
+   ],
+   "bore_r": 2.75,
+   "bore_x": [
+    -6.0,
+    25.0
+   ],
+   "seat_r": [
+    2.75,
+    6.0
+   ],
+   "seat_x": [
+    0.0,
+    3.0
+   ]
+  },
+  "actuator": {
+   "seat_r": [
+    21.0,
+    44.0
+   ],
+   "seat_x": [
+    7.0,
+    10.0
+   ],
+   "bolt_pcd_r": 35.0,
+   "bolt_angles_deg": [
+    45,
+    135,
+    225,
+    315
+   ],
+   "bolt_r": 2.25,
+   "bolt_x": [
+    -14.0,
+    10.0
+   ],
+   "shaft_r": 20.0,
+   "shaft_x": [
+    -14.0,
+    10.0
+   ],
+   "body_r": 46.0,
+   "body_x": [
+    10.0,
+    58.0
+   ],
+   "mass_kg": 0.62,
+   "com_x": 34.0
+  },
+  "link": {
+   "hub_r": 22.0,
+   "slab_x": [
+    -13.0,
+    -5.0
+   ],
+   "bar_width": 26.0,
+   "bar_length": 170.0
+  },
+  "keepout": {
+   "body_x_below": -14.0,
+   "belt_plate": {
+    "x": [
+     -5.0,
+     0.0
+    ],
+    "y": [
+     -45.0,
+     45.0
+    ],
+    "z": [
+     -30.0,
+     30.0
+    ]
+   }
+  },
+  "envelope": {
+   "x": [
+    -14.0,
+    70.0
+   ],
+   "y": [
+    -90.0,
+    90.0
+   ],
+   "z": [
+    -170.0,
+    40.0
+   ]
+  },
+  "stops": {
+   "flexion_stop_max_deg": 140.0,
+   "extension_stop_min_deg": -35.0,
+   "rom_margin_deg": 3.0
+  },
+  "mass_max_g": 95.0,
+  "volume_tol_mm3": 0.001
+ },
+ "claims": {
+  "G1_solid": "build() returns exactly one valid closed solid",
+  "G2_printer": "fits the 250 x 210 bed and 220 mm height with layers normal to BUILD_DIR",
+  "G3_keepout": "no material outside the envelope, below x=-14 (body), in the belt plate, in the actuator body (r<46, x in [10,58] about AXIS), or in the link hub (r<22, x in [-13,-5])",
+  "G4_interfaces": "belt bores (r 2.75) and actuator bolt bores (r 2.25 on r=35) and the shaft bore (r 20) are clear; belt seats (r 2.75..6, x 0..3) and the actuator seat (r 21..44, x 7..10, less the bolt bores) are solid",
+  "G5_axis": "AXIS within y in [-15,15], z in [-115,-75]",
+  "G6_stops": "the link (hub r22 plus a 26 mm bar to r=170 in x in [-13,-5]) is stopped by the bracket at or before +140 deg flexion and at or before -35 deg extension, and turns freely at 0 deg",
+  "G7_mass": "mass <= 95 g",
+  "K1_rom": "for every scenario: the link stays clear of the stops over the exo joint range the MuJoCo run reaches, plus 3 deg each way",
+  "K2_cuff_slide": "for every scenario: the cuff slides at most 25 mm from its fitted position along the link",
+  "S1_strength": "for every scenario: safety factor >= 2.0 on both in-plane von Mises (vs 70 MPa) and interlayer tension (vs 35 MPa) at every FEA integration point, at every time sample",
+  "S3_stiffness": "for every scenario: the actuator seat moves <= 1.0 mm and tilts <= 1.5 deg (best-fit rigid motion of the seat)"
+ },
+ "thresholds": {
+  "sf_min": 2.0,
+  "slide_max_mm": 25.0,
+  "seat_deflection_max_mm": 1.0,
+  "seat_tilt_max_deg": 1.5
+ },
+ "scenarios": {
+  "walk": {
+   "height_m": [
+    1.5,
+    1.95
+   ],
+   "speed_mps": [
+    0.6,
+    1.8
+   ],
+   "slope_deg": [
+    -10,
+    10
+   ],
+   "assist_Nm": [
+    0,
+    20
+   ],
+   "battery_V": [
+    19.8,
+    25.2
+   ]
+  },
+  "sts": {
+   "height_m": [
+    1.5,
+    1.95
+   ],
+   "chair_height_m": [
+    0.38,
+    0.52
+   ],
+   "assist_Nm": [
+    0,
+    20
+   ],
+   "battery_V": [
+    19.8,
+    25.2
+   ]
+  },
+  "note": "walk = level or sloped walking (4 s, judged from 0.5 s to 3.7 s); sts = sit-to-stand from a chair (3 s, judged 0.5 s to 2.7 s). assist_Nm is the controller gain (delayed-output-feedback for walking, extension assist for sit-to-stand); the drive limits output torque to 19.2 N*m. Body mass is not a scenario parameter: the wearer's motion is prescribed, so it does not change the exo loads in this model."
+ },
+ "model_settings": {
+  "mesh": {
+   "default": {
+    "h": 2.5,
+    "refine": []
+   },
+   "h": [
+    1.2,
+    3.0
+   ],
+   "refine": "up to 3 balls {center:[x,y,z] mm, radius <= 8 mm, h >= 0.5 mm}"
+  },
+  "mujoco_timestep_s": {
+   "default": 0.0005,
+   "range": [
+    0.0001,
+    0.001
+   ]
+  },
+  "spice_step_s": {
+   "default": 2e-05,
+   "range": [
+    5e-06,
+    5e-05
+   ]
+  },
+  "note": "NO may set any of these per scenario, inside the ranges; the failure must reproduce with those settings"
+ },
+ "grid": {
+  "walk": {
+   "height_m": [
+    1.5,
+    1.725,
+    1.95
+   ],
+   "speed_mps": [
+    0.6,
+    1.2,
+    1.8
+   ],
+   "slope_deg": [
+    -10,
+    0,
+    10
+   ],
+   "assist_Nm": [
+    20
+   ],
+   "battery_V": [
+    25.2
+   ]
+  },
+  "sts": {
+   "height_m": [
+    1.5,
+    1.725,
+    1.95
+   ],
+   "chair_height_m": [
+    0.38,
+    0.45,
+    0.52
+   ],
+   "assist_Nm": [
+    20
+   ],
+   "battery_V": [
+    25.2
+   ]
+  },
+  "note": "the judge's own coverage sweep at default model settings: 27 walking + 9 sit-to-stand scenarios"
+ },
+ "not_covered": [
+  "falls, trips and impacts (the wearer's motion is prescribed, not simulated)",
+  "lateral (x) forces: the motion is planar",
+  "fatigue",
+  "print defects; material values are assumed",
+  "the left bracket",
+  "comfort and fit on a real body",
+  "bolt preload, contact separation and friction slip at the belt clamp (the clamp is a linear elastic bond)"
+ ],
+ "pass_rule": "a scenario counts as a failure only if the judge reproduces it: K1, K2, S1 or S3 false. Out-of-range scenarios or settings are rejected, not run.",
+ "rule_changes": [
+  "after round 2: the 2 mm boundary exclusion applies to each stress-reading point (element corner) instead of to whole elements by their centre; rounds 1 and 2 re-judged",
+  "after round 3: the rigid belt clamp (fixed face and fixed bolt bores, with a 2 mm unscored zone) is replaced by an elastic clamp (spring bed plus bolt springs), stress is read at every integration point instead of extrapolated corners, and nothing is excluded; rounds 1-3 re-judged"
+ ],
+ "belt_clamp": {
+  "model": "linear elastic clamp: the bracket face on the belt plate (x=0 inside the plate footprint) rests on grounded springs per unit area; each M5 belt bolt is a spring in x, y and z spread over its bore by area. Values assumed: a 5 mm PA6 belt plate (E 3000 MPa, G 1100 MPa) on a rigid frame, and a steel M5 bolt bearing in the printed flange.",
+  "k_normal_N_per_mm3": 600.0,
+  "k_tangent_N_per_mm3": 220.0,
+  "k_bolt_N_per_mm": 30000.0
+ }
+}
