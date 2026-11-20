@@ -3,7 +3,8 @@ name = "debateRL"
 version = "0.1.0"
 description = "Physics judges for design debates between AI agents: OpenCASCADE geometry, MuJoCo, ngspice and CalculiX"
 readme = "README.md"
-license = "MIT"
+license = "CC-BY-NC-4.0"
+authors = [{name = "Hassana Labs"}]
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = ["anthropic", "build123d", "gmsh", "mujoco", "numpy>=2", "scipy"]

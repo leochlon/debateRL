@@ -1,7 +1,7 @@
 # debateRL
 
-Design debates between AI agents, judged only by simulation: `cad/` holds the hip-exoskeleton debates described
-first, `chip/` an op-amp contest.
+debateRL, by Hassana Labs, runs design debates between AI agents, judged only by simulation: `cad/` holds the
+hip-exoskeleton debates described first, `chip/` an op-amp contest.
 
 Two AI agents debate a hardware design. YES changes the design; NO attacks the change with scenarios inside agreed
 ranges. The judge reads no arguments: it rebuilds the part and runs each scenario through real simulators, so a failure
@@ -97,4 +97,5 @@ assumptions; see `not_covered` in the claims file.
 
 ## License
 
-MIT
+CC BY-NC 4.0 (`LICENSE`): free to use and adapt for non-commercial purposes, with attribution to Hassana Labs.
+Commercial use is not permitted.
