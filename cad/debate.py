@@ -3,19 +3,19 @@
 Messages are built only from protocol fields (the current baseline, judge verdicts, the motive check and judge-confirmed
 attack results); agents' free-text replies are logged, never relayed. Official judge calls use their own cache.
 
-  debaterl debate PROBLEM start RUN [--known K.json]   baseline r0 and its report into place; K: scenarios re-run on it,
+  resips debate PROBLEM start RUN [--known K.json]   baseline r0 and its report into place; K: scenarios re-run on it,
                                                         whose confirmed failures go to YES in round 1
-  debaterl debate PROBLEM yes RUN R                    print YES's message for round R
-  debaterl debate PROBLEM judge-yes RUN R              official check + motive on YES's round-R files (snapshotted first)
-  debaterl debate PROBLEM no RUN R                     print NO's message
-  debaterl debate PROBLEM judge-no RUN R               official run of NO's round-R attack; records the outcome
+  resips debate PROBLEM yes RUN R                    print YES's message for round R
+  resips debate PROBLEM judge-yes RUN R              official check + motive on YES's round-R files (snapshotted first)
+  resips debate PROBLEM no RUN R                     print NO's message
+  resips debate PROBLEM judge-no RUN R               official run of NO's round-R attack; records the outcome
 
 PROBLEM is hip (the bracket) or actuator. RUN starts with baseline_r0.py (actuator: baseline_r0.json). With a meter serving
-in RUN/meter (debaterl meter serve RUN/meter --names yes,no --budget scenarios=N), each side simulates on its budget.
+in RUN/meter (resips meter serve RUN/meter --names yes,no --budget scenarios=N), each side simulates on its budget.
 """
 import argparse, datetime, json, os, shutil, subprocess, sys
-from debaterl import meter
-from debaterl.helpers import save
+from resips import meter
+from resips.helpers import save
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -52,7 +52,7 @@ Tools (deterministic, results cached by design file hash):
   {cli} motive baseline.py design.py motive.json
 The simulator source is readable in {src} (read it if useful; do not change anything outside your own folder). Each FEA
 mesh setting is a fresh solve (about 30 s at the default mesh, several minutes for the finest settings), so choose
-refinements deliberately. Use at most 3 debaterl commands at once.
+refinements deliberately. Use at most 3 resips commands at once.
 {run_rules}"""
 
 ACTUATOR = """# The actuator debate
@@ -115,7 +115,7 @@ scenario."""
 
 METERED = ("Every simulation goes through the meter, against your budget for the whole debate ({left} left now): `check` costs\n"
            "36 scenarios, `run` one per scenario, a scenario motive 2, anything else nothing. A command that would overdraw the\n"
-           "budget is refused; `debaterl meter budget` shows what is left.\n")
+           "budget is refused; `resips meter budget` shows what is left.\n")
 
 HOW = ("Check the design with `{cli} check` (it must pass) and the motive with `{cli} motive`, because the judge runs\n"
        "exactly these.")
@@ -137,13 +137,13 @@ PENDING = "pending NO's attack"
 
 
 def cache(side):
-  return os.path.join(os.environ.get("DEBATERL_CACHE", "~/.cache/debaterl"), side)
+  return os.path.join(os.environ.get("RESIPS_CACHE", "~/.cache/resips"), side)
 
 
 def judge(P, *args):
-  """An official judge call (local, or on DEBATERL_HOST). A judge that does not answer stops the step: nothing is recorded."""
-  p = subprocess.run([sys.executable, "-m", "debaterl", P["judge"], *args], capture_output=True, text=True,
-                     env={**os.environ, "DEBATERL_CACHE": cache("official"), "DEBATERL_METER": ""})
+  """An official judge call (local, or on RESIPS_HOST). A judge that does not answer stops the step: nothing is recorded."""
+  p = subprocess.run([sys.executable, "-m", "resips", P["judge"], *args], capture_output=True, text=True,
+                     env={**os.environ, "RESIPS_CACHE": cache("official"), "RESIPS_METER": ""})
   try:
     return json.loads(p.stdout)
   except ValueError:
@@ -159,18 +159,18 @@ def ledger(run):
 
 
 def rules(P, side, run):
-  host = os.environ.get(f"DEBATERL_HOST_{side.upper()}", os.environ.get("DEBATERL_HOST"))
-  env = f"DEBATERL_CACHE={cache(side)}" + (f" DEBATERL_HOST={host}" if host else "")
-  remote = (f", or by ssh to {host} ({os.environ.get('DEBATERL_REMOTE_PYTHON', '~/debateRL/.venv/bin/python')} -m debaterl, in a "
+  host = os.environ.get(f"RESIPS_HOST_{side.upper()}", os.environ.get("RESIPS_HOST"))
+  env = f"RESIPS_CACHE={cache(side)}" + (f" RESIPS_HOST={host}" if host else "")
+  remote = (f", or by ssh to {host} ({os.environ.get('RESIPS_REMOTE_PYTHON', '~/resips/.venv/bin/python')} -m resips, in a "
             "directory of your own under /tmp there)") if host else ""
   metered, state = "", os.path.join(run, "meter")
   if os.path.exists(os.path.join(state, "url.txt")):
     env, remote = " ".join(f"{k}={v}" for k, v in meter.env(state)[side].items()), ""
     metered = METERED.format(left=", ".join(f"{n} {k}" for k, n in meter.books(state)[side]["left"].items()))
-  run_rules = (f"Run all simulation through debaterl, with {env} in front of every command{remote}. Do not install packages\n"
+  run_rules = (f"Run all simulation through resips, with {env} in front of every command{remote}. Do not install packages\n"
                "or run simulations any other way, keep local files inside your folder, and do not change them after replying: the\n"
                "judge reads them as soon as you reply.")
-  return P["rules"].format(cli=f"debaterl {P['judge']}", src=HERE, run_rules=metered + run_rules)
+  return P["rules"].format(cli=f"resips {P['judge']}", src=HERE, run_rules=metered + run_rules)
 
 
 def clock(minutes):
@@ -195,7 +195,7 @@ def yes(P, run, r, rounds=3, minutes=10):
              + (f" Judge-reported failures on the grid: {json.dumps(e['failing'])}." if e.get("failing") else "")
              + (f" NO's judge-confirmed failing scenarios: {json.dumps(e['confirmed'])}." if e.get("confirmed") else ""))
   return YES.format(rules=rules(P, "yes", run), dir=p["yes"], run=run, round=r, rounds=rounds, baseline=base, report=rep, history=hist,
-                    what=P["what"], submit=P["submit"], how=P["how"].format(cli=f"debaterl {P['judge']}"), search=P["search"], minutes=minutes,
+                    what=P["what"], submit=P["submit"], how=P["how"].format(cli=f"resips {P['judge']}"), search=P["search"], minutes=minutes,
                     reply=P["reply"]) + clock(minutes)
 
 
@@ -314,7 +314,7 @@ def judge_no(P, run, r):
 
 
 def main(argv):
-  ap = argparse.ArgumentParser(prog="debaterl debate", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+  ap = argparse.ArgumentParser(prog="resips debate", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
   ap.add_argument("problem", choices=PROBLEMS)
   ap.add_argument("step", choices=("start", "yes", "judge-yes", "no", "judge-no"))
   ap.add_argument("run")

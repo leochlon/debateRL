@@ -9,8 +9,8 @@ pinned to the thigh. The bracket load is the force and moment the housing subtre
 import math
 import numpy as np
 import mujoco
-from debaterl.helpers import gait, minjerk
-from debaterl.cad.hip_geom import G
+from resips.helpers import gait, minjerk
+from resips.cad.hip_geom import G
 
 SEG = {"hat": (0.678, 0.288, 0.626, 0.496), "thigh": (0.100, 0.245, 0.433, 0.323),
        "shank": (0.0465, 0.246, 0.433, 0.302), "foot": (0.0145, 0.152, 0.5, 0.475)}

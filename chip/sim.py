@@ -1,8 +1,8 @@
 """Fixed two-stage Miller op-amp, simulated with ngspice: performance at one operating point, or the input offset of
 one mismatch sample. Deterministic.
 
-  python -m debaterl.chip.sim design.json --process SS --temp 125 --vdd 1.7
-  python -m debaterl.chip.sim design.json --seed 439217
+  python -m resips.chip.sim design.json --process SS --temp 125 --vdd 1.7
+  python -m resips.chip.sim design.json --seed 439217
 
 design.json: W1 L1 (input pair) W3 L3 (mirror load) W5 L5 (tail) W6 L6 (second-stage PMOS) W7 L7 (second-stage NMOS sink)
 W8 L8 (bias diode) in um, Ib in uA, Cc in pF, Rz in ohm. Load 2 pF.

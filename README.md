@@ -1,6 +1,8 @@
 <div align="center">
 
-<h1>debateRL</h1>
+<h1>resips</h1>
+
+<i>res ipsa loquitur</i>: the thing speaks for itself
 
 <b>Two AI agents argue over a hardware design. The judge reads no arguments: it builds the part and runs the physics.</b>
 
@@ -50,22 +52,22 @@ by Hassana Labs
 ```sh
 apt install calculix-ccx ngspice     # ccx and ngspice on the PATH
 pip install -e .
-debaterl validate                    # FEA against closed-form answers
+resips validate                      # FEA against closed-form answers
 ```
 
-The repository root is the `debaterl` package, so it runs once installed.
+The repository root is the `resips` package, so it runs once installed.
 
 ## Quick start
 
 ```sh
-debaterl hip geometry design.py                   # scenario-free claims, mass, stop angles (~10 s)
-debaterl hip check design.py                      # every claim on the 36-scenario grid
-debaterl hip run design.py scenarios.json         # a list of scenarios (an attack)
-debaterl hip motive baseline.py design.py m.json  # two-sided test of a change
-debaterl hip contact design.py                    # push-only belt clamp at the three hardest moves (slow)
-debaterl actuator check spec.json
+resips hip geometry design.py                   # scenario-free claims, mass, stop angles (~10 s)
+resips hip check design.py                      # every claim on the 36-scenario grid
+resips hip run design.py scenarios.json         # a list of scenarios (an attack)
+resips hip motive baseline.py design.py m.json  # two-sided test of a change
+resips hip contact design.py                    # push-only belt clamp at the three hardest moves (slow)
+resips actuator check spec.json
 
-debaterl debate hip start RUN                     # then yes, judge-yes, no, judge-no for each round
+resips debate hip start RUN                     # then yes, judge-yes, no, judge-no for each round
 ```
 
 Output is JSON. Runs are deterministic: gmsh and CalculiX run single-threaded per process, and an FEA solve runs six
@@ -73,11 +75,11 @@ CalculiX processes of about 1 GB each.
 
 | variable | default | |
 |---|---|---|
-| `DEBATERL_CACHE` | `~/.cache/debaterl` | results cached by design file hash |
-| `DEBATERL_WORKERS` | CPU count | parallel judge processes |
-| `DEBATERL_HOST` | unset | ssh destination: judge commands run there |
-| `DEBATERL_REMOTE_PYTHON` | `~/debateRL/.venv/bin/python` | Python on that host, with the package installed |
-| `DEBATERL_METER`, `DEBATERL_TOKEN` | unset | judge commands go through the [meter](#meter), on that token's budget |
+| `RESIPS_CACHE` | `~/.cache/resips` | results cached by design file hash |
+| `RESIPS_WORKERS` | CPU count | parallel judge processes |
+| `RESIPS_HOST` | unset | ssh destination: judge commands run there |
+| `RESIPS_REMOTE_PYTHON` | `~/resips/.venv/bin/python` | Python on that host, with the package installed |
+| `RESIPS_METER`, `RESIPS_TOKEN` | unset | judge commands go through the [meter](#meter), on that token's budget |
 
 ## Problems
 
@@ -87,7 +89,7 @@ Two judges: `hip`, a hip-exoskeleton bracket as build123d code, and `actuator`, 
 final bracket. `cad/hip_claims.json` is the contract: every claim and threshold, the scenario ranges, the model settings
 a challenger may change, the judge's grid, and what is not covered.
 
-`debaterl debate` builds each round's messages only from protocol fields (the baseline, the judge's verdicts, the motive
+`resips debate` builds each round's messages only from protocol fields (the baseline, the judge's verdicts, the motive
 check, judge-confirmed attacks) and snapshots both sides' files before judging them. Launching the agents is up to you.
 
 ### Op-amp (`chip/`)
@@ -98,12 +100,12 @@ shell each: debaters A and B design, attack each other's design with failing ope
 attack again, while solo designers work alone for comparison.
 
 ```sh
-debaterl chip debate --out runs/chip1 [--solo 2]  # needs ANTHROPIC_API_KEY
-debaterl chip judge design.json [--attack a.json]
-debaterl chip sim design.json --process SS --temp 125 --vdd 1.7
+resips chip debate --out runs/chip1 [--solo 2]  # needs ANTHROPIC_API_KEY
+resips chip judge design.json [--attack a.json]
+resips chip sim design.json --process SS --temp 125 --vdd 1.7
 ```
 
-The judge builds the one-million-seed mismatch table in `DEBATERL_CACHE` on first use.
+The judge builds the one-million-seed mismatch table in `RESIPS_CACHE` on first use.
 
 ## Meter
 
@@ -122,16 +124,16 @@ charged, and every call is logged with its files to `STATE/log/NAME.jsonl`.
 | `chip judge` | 105 perf and 1009 offset; an attack, its points and seeds |
 
 ```sh
-debaterl meter serve RUN/meter --names yes,no --budget scenarios=300 &   # the hip and actuator debates pick it up
-debaterl chip debate --out runs/chip1 --budget perf=1500,offset=1500     # starts its own meter
-DEBATERL_METER=$(cat RUN/meter/url.txt) DEBATERL_TOKEN=... debaterl hip check design.py
-debaterl meter budget
+resips meter serve RUN/meter --names yes,no --budget scenarios=300 &   # the hip and actuator debates pick it up
+resips chip debate --out runs/chip1 --budget perf=1500,offset=1500     # starts its own meter
+RESIPS_METER=$(cat RUN/meter/url.txt) RESIPS_TOKEN=... resips hip check design.py
+resips meter budget
 ```
 
 ## Layout
 
 ```
-__main__.py        the debaterl command; ssh runner
+__main__.py        the resips command; ssh runner
 helpers.py         settings, design build cache, B-rep helpers, gait curves, parallel cached runs
 meter.py           simulation budgets: tokens, a budget per kind, the call log; judge commands go through it
 cad/
@@ -155,11 +157,11 @@ chip/
 ## Citation
 
 ```bibtex
-@software{debaterl2026,
+@software{resips2026,
   author = {{Hassana Labs}},
-  title  = {debateRL: physics judges for design debates between AI agents},
+  title  = {resips: physics judges for design debates between AI agents},
   year   = {2026},
-  url    = {https://github.com/leochlon/debateRL}
+  url    = {https://github.com/leochlon/resips}
 }
 ```
 

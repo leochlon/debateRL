@@ -7,8 +7,8 @@ them inside the agreed ranges.
 """
 import itertools, json, math, os, time
 import numpy as np
-from debaterl.helpers import pmap, run_cached, scenario_motive, scenario_path, verdicts
-from debaterl.cad import fem, hip_body as body, hip_drive as drive, hip_geom as geom, hip_motor as motor
+from resips.helpers import pmap, run_cached, scenario_motive, scenario_path, verdicts
+from resips.cad import fem, hip_body as body, hip_drive as drive, hip_geom as geom, hip_motor as motor
 
 SPEC = geom.SPEC
 TH = SPEC["thresholds"]

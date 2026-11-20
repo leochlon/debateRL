@@ -3,8 +3,8 @@ import functools, hashlib, json, os, subprocess, sys, traceback
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 
-CACHE = os.path.expanduser(os.environ.get("DEBATERL_CACHE", "~/.cache/debaterl"))
-WORKERS = int(os.environ.get("DEBATERL_WORKERS", os.cpu_count() or 1))
+CACHE = os.path.expanduser(os.environ.get("RESIPS_CACHE", "~/.cache/resips"))
+WORKERS = int(os.environ.get("RESIPS_WORKERS", os.cpu_count() or 1))
 
 
 def save(path, obj):

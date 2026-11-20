@@ -368,7 +368,7 @@ def validate():
   E, NU = 3500.0, 0.35
 
   def run(shape, cfg, fixed_fn, load_fn, ref, wrench):
-    d = tempfile.mkdtemp(prefix="debaterl_val_")
+    d = tempfile.mkdtemp(prefix="resips_val_")
     export_step(shape, os.path.join(d, "p.step"))
     X, El, T = mesh(os.path.join(d, "p.step"), mesh_cfg(cfg))
     El = abaqus_order(X, El)

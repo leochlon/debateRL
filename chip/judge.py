@@ -5,13 +5,13 @@
   attack(design, a)      an attacker's counterexamples {"points": [{"process", "temp", "vdd"}], "seeds": [int]}:
                          a point or seed counts only if it is in the specified range and the simulation fails there
 
-  python -m debaterl.chip.judge design.json [--attack attack.json]
+  python -m resips.chip.judge design.json [--attack attack.json]
 """
 import argparse, json, os, sys
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
-from debaterl.chip import sim
-from debaterl.helpers import CACHE, WORKERS
+from resips.chip import sim
+from resips.helpers import CACHE, WORKERS
 
 TEMPS = [-40.0, -12.5, 15.0, 42.5, 70.0, 97.5, 125.0]
 VDDS = [1.7, 1.75, 1.8, 1.85, 1.9]

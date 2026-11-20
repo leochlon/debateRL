@@ -8,8 +8,8 @@ below 3 N*m, and the bracket keeps its claims K1, K2, S1, S3 under the actuator'
 Objective: the lightest actuator that passes.
 """
 import json, os
-from debaterl.helpers import scenario_motive, verdicts
-from debaterl.cad import hip_geom as geom, hip_judge as judge, hip_motor as motor
+from resips.helpers import scenario_motive, verdicts
+from resips.cad import hip_geom as geom, hip_judge as judge, hip_motor as motor
 
 BRACKET = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hip_bracket.py")
 CLAIMS = ("M2_torque", "M3_thermal", "M4_drag", "K1_rom", "K2_cuff_slide", "S1_strength", "S3_stiffness")

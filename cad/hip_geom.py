@@ -1,8 +1,8 @@
 """Exact B-rep checks (OpenCASCADE via build123d): solid validity, printer fit, keep-outs, interfaces, hard stops, mass."""
 import json, math, os
 from build123d import Pos, Rot, import_step
-from debaterl import helpers
-from debaterl.helpers import box, vol, xcyl
+from resips import helpers
+from resips.helpers import box, vol, xcyl
 
 SPEC = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "hip_claims.json")))
 G = SPEC["geometry"]

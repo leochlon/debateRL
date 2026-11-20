@@ -3,33 +3,33 @@ folder. Round 1 design; round 2 attack the opponent's design (and optionally sub
 round 4 attack the opponent's final design. Solo designers get two turns. The judge checks every claim by simulation;
 the smallest final design that passes the judge and survives the opponent's round-4 attack wins.
 
-  python -m debaterl.chip.debate --out runs/1 [--model claude-fable-5-2] [--effort high] [--solo 2] [--minutes 25]
-                                  [--budget perf=1500,offset=1500]   each designer simulates through a meter on this budget
+  python -m resips.chip.debate --out runs/1 [--model claude-fable-5-2] [--effort high] [--solo 2] [--minutes 25]
+                                [--budget perf=1500,offset=1500]   each designer simulates through a meter on this budget
 """
 import argparse, json, os, queue, signal, subprocess, sys, threading, time, uuid
 from concurrent.futures import ThreadPoolExecutor
 import anthropic
-from debaterl import meter
-from debaterl.chip import judge
+from resips import meter
+from resips.chip import judge
 
 PY = sys.executable
 TOOLS = [{"type": "bash_20250124", "name": "bash"}]
 CMD_TIMEOUT, MAX_OUT = 600, 30000
 
 LOCAL_TOOLS = f"""Tools (shared simulator, deterministic):
-  {PY} -m debaterl.chip.sim <design.json> --process TT|FF|SS --temp <C> --vdd <V>
+  {PY} -m resips.chip.sim <design.json> --process TT|FF|SS --temp <C> --vdd <V>
       performance at one operating point: gain_db, gbw_hz, pm_deg, power_w, area_um2, pass, failures (~15 ms per run)
-  {PY} -m debaterl.chip.sim <design.json> --seed <S>
+  {PY} -m resips.chip.sim <design.json> --seed <S>
       input-referred offset (offset_v) of mismatch sample S at TT, 27 C, 1.8 V
-  You may also import the module (from debaterl.chip import sim) and call sim.simulate(p, process, temp, vdd)
+  You may also import the module (from resips.chip import sim) and call sim.simulate(p, process, temp, vdd)
   and sim.offset(p, seed) directly. {PY} has numpy and scipy."""
 
 METERED_TOOLS = f"""Tools (metered simulator, deterministic):
-  {PY} -m debaterl chip sim <design.json> --process TT|FF|SS --temp <C> --vdd <V>
+  {PY} -m resips chip sim <design.json> --process TT|FF|SS --temp <C> --vdd <V>
       performance at one operating point: gain_db, gbw_hz, pm_deg, power_w, area_um2, pass, failures (costs 1 perf)
-  {PY} -m debaterl chip sim <design.json> --seed <S>
+  {PY} -m resips chip sim <design.json> --seed <S>
       input-referred offset (offset_v) of mismatch sample S at TT, 27 C, 1.8 V (costs 1 offset)
-  {PY} -m debaterl meter budget
+  {PY} -m resips meter budget
       what is left of your budget: @BUDGET@ for the whole run, including any checks of another designer's design
   A command that would overdraw the budget is refused. Simulate only through these commands. {PY} has numpy and scipy."""
 

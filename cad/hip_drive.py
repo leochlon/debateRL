@@ -3,7 +3,7 @@ loop with back-EMF feedforward and anti-windup, and the motor winding (R, L, bac
 Input: commanded output torque and joint speed over time. Output: delivered output torque = Kt * N * eta * i(t)."""
 import os, subprocess, tempfile
 import numpy as np
-from debaterl.cad.hip_body import EXO
+from resips.cad.hip_body import EXO
 
 CIRCUIT = {"R_batt": 0.08, "C_bus": 470e-6, "R_motor": 0.25, "R_switch": 0.02, "L_motor": 120e-6, "duty_max": 0.95,
            "bandwidth_hz": 1000.0}
@@ -60,7 +60,7 @@ def deliver(t, tau_cmd, w_exo, v_batt, step=STEP_DEFAULT, act=None):
   k = a["Kt"] * a["N"] * a["eta"]
   i_ref = np.clip(np.asarray(tau_cmd) / k, -a["I_max"], a["I_max"])
   w_motor = np.asarray(w_exo) * a["N"]
-  with tempfile.TemporaryDirectory(prefix="debaterl_spice_") as d:
+  with tempfile.TemporaryDirectory(prefix="resips_spice_") as d:
     open(os.path.join(d, "drive.cir"), "w").write(netlist(np.asarray(t), i_ref, w_motor, v_batt, step, a["R"], a["L"], a["Kt"]))
     p = subprocess.run(["ngspice", "-b", "drive.cir"], cwd=d, capture_output=True, text=True, timeout=600)
     out = os.path.join(d, "out.txt")

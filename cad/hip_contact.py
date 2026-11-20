@@ -3,7 +3,7 @@ the mesh) rests on the claims' spring bed, but a spring that would pull is relea
 touching nodes is stable. Two treatments of a lifted node's tangential springs bracket the friction question: "stick"
 keeps them (shear carried even where the face has lifted, the stiff bound) and "free" releases them with the normal spring.
 
-  debaterl hip contact design.py [scenarios.json] [--actuator actuator.json] [--variants free,stick] [--export out.json]
+  resips hip contact design.py [scenarios.json] [--actuator actuator.json] [--variants free,stick] [--export out.json]
 
 Without scenarios it runs the three hardest moves below. With an actuator spec, the MuJoCo and ngspice runs carry that
 actuator (hip_motor.py) instead of the bracket debate's default. Model settings in a scenario are not used: the check runs the
@@ -13,7 +13,7 @@ both safety factors >= 2.0 at every checked instant.
 import argparse, base64, json, math, multiprocessing, os, shutil, subprocess, tempfile
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
-from debaterl.cad import fem, hip_body as body, hip_drive as drive, hip_geom as geom, hip_judge as judge, hip_motor as motor
+from resips.cad import fem, hip_body as body, hip_drive as drive, hip_geom as geom, hip_judge as judge, hip_motor as motor
 
 SC = [
   ("uphill fast", {"activity": "walk", "height_m": 1.5, "speed_mps": 1.8, "slope_deg": 10, "assist_Nm": 20, "battery_V": 19.8}),
@@ -194,7 +194,7 @@ def check(path, scenarios=None, act_path=None, variants=("free",), export=None):
 
 
 def parser():
-  ap = argparse.ArgumentParser(prog="debaterl hip contact")
+  ap = argparse.ArgumentParser(prog="resips hip contact")
   ap.add_argument("design")
   ap.add_argument("scenarios", nargs="?")
   ap.add_argument("--actuator")

@@ -3,12 +3,12 @@
 Each agent has a token and a budget per kind: scenarios for the hip and actuator judges, operating points (perf) and
 mismatch seeds (offset) for the chip. A judge command costs what it asks to simulate, a command that would overdraw a
 budget is refused whole, and every call is logged with its files to STATE/log/NAME.jsonl. Commands run as
-`python -m debaterl` on the meter's machine (on its DEBATERL_HOST, if set). A command that fails is not charged.
+`python -m resips` on the meter's machine (on its RESIPS_HOST, if set). A command that fails is not charged.
 
-  debaterl meter serve STATE --names yes,no --budget scenarios=300   STATE/tokens.json, STATE/url.txt
-  debaterl meter budget                                              what is left
+  resips meter serve STATE --names yes,no --budget scenarios=300   STATE/tokens.json, STATE/url.txt
+  resips meter budget                                              what is left
 
-With DEBATERL_METER (the url) and DEBATERL_TOKEN set, `debaterl hip|actuator|chip` judge commands go through the meter.
+With RESIPS_METER (the url) and RESIPS_TOKEN set, `resips hip|actuator|chip` judge commands go through the meter.
 """
 import argparse, atexit, json, os, secrets, subprocess, sys, tempfile, threading, time, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,7 +23,7 @@ def cost(argv, wd):
   def load(path):
     return json.load(open(os.path.join(wd, path)))
   if prob == "chip":
-    from debaterl.chip import judge, sim
+    from resips.chip import judge, sim
     if cmd == "sim":
       return {"offset" if sim.parser().parse_args(args).seed is not None else "perf": 1}
     a = judge.parser().parse_args(args)
@@ -31,7 +31,7 @@ def cost(argv, wd):
       return {"perf": len(judge.GRID), "offset": 1 + len(sim.DEVICES) + judge.TOP}
     at = load(a.attack)
     return {"perf": len((at.get("points") or [])[:judge.MAX_POINTS]), "offset": len((at.get("seeds") or [])[:judge.MAX_SEEDS])}
-  from debaterl.cad import hip_judge
+  from resips.cad import hip_judge
   if cmd == "check":
     return {"scenarios": len(hip_judge.grid())}
   if cmd == "run":
@@ -41,7 +41,7 @@ def cost(argv, wd):
     m = load(args[2])
     return {"scenarios": 2 if isinstance(m, dict) and m.get("kind") == "scenario" else 0}
   if cmd == "contact":
-    from debaterl.cad import hip_contact
+    from resips.cad import hip_contact
     a = hip_contact.parser().parse_args(args)
     sc = load(a.scenarios) if a.scenarios else hip_contact.SC
     return {"scenarios": (len(sc) if isinstance(sc, list) else 1) * len(a.variants.split(","))}
@@ -70,7 +70,7 @@ def place(req, wd):
 
 
 def serve(state, names, budget):
-  from debaterl.helpers import save
+  from resips.helpers import save
   os.makedirs(os.path.join(state, "log"), exist_ok=True)
   tf, bf = os.path.join(state, "tokens.json"), os.path.join(state, "budget.json")
   tokens = json.load(open(tf)) if os.path.exists(tf) else {}
@@ -124,8 +124,8 @@ def serve(state, names, budget):
           left = dict(left)
         if short:
           return self.reply(429, {"error": "budget exhausted: " + "; ".join(short), "left": left})
-        p = subprocess.run([sys.executable, "-m", "debaterl", *argv], cwd=wd, capture_output=True, text=True,
-                           env={**os.environ, "DEBATERL_METER": ""})
+        p = subprocess.run([sys.executable, "-m", "resips", *argv], cwd=wd, capture_output=True, text=True,
+                           env={**os.environ, "RESIPS_METER": ""})
       try:
         json.loads(p.stdout)
         ok = p.returncode == 0
@@ -155,7 +155,7 @@ def start(state, names, budget):
   url, log = os.path.join(state, "url.txt"), os.path.join(state, "serve.log")
   if os.path.exists(url):
     os.remove(url)
-  p = subprocess.Popen([sys.executable, "-m", "debaterl", "meter", "serve", state, "--names", ",".join(names), "--budget", budget],
+  p = subprocess.Popen([sys.executable, "-m", "resips", "meter", "serve", state, "--names", ",".join(names), "--budget", budget],
                        stdout=open(log, "w"), stderr=subprocess.STDOUT)
   atexit.register(p.terminate)
   while not os.path.exists(url):
@@ -168,7 +168,7 @@ def start(state, names, budget):
 def env(state):
   """name -> the variables that send that agent's judge commands through the meter in state"""
   url = open(os.path.join(state, "url.txt")).read().strip()
-  return {n: {"DEBATERL_METER": url, "DEBATERL_TOKEN": t} for n, t in json.load(open(os.path.join(state, "tokens.json"))).items()}
+  return {n: {"RESIPS_METER": url, "RESIPS_TOKEN": t} for n, t in json.load(open(os.path.join(state, "tokens.json"))).items()}
 
 
 def books(state):
@@ -176,8 +176,8 @@ def books(state):
 
 
 def post(path, body):
-  url = os.environ.get("DEBATERL_METER") or sys.exit("meter: DEBATERL_METER is not set")
-  req = urllib.request.Request(url + path, json.dumps({"token": os.environ.get("DEBATERL_TOKEN", ""), **body}).encode(),
+  url = os.environ.get("RESIPS_METER") or sys.exit("meter: RESIPS_METER is not set")
+  req = urllib.request.Request(url + path, json.dumps({"token": os.environ.get("RESIPS_TOKEN", ""), **body}).encode(),
                                {"Content-Type": "application/json"})
   try:
     with urllib.request.urlopen(req, timeout=3600) as r:
@@ -197,7 +197,7 @@ def call(argv):
 
 
 def main(argv):
-  ap = argparse.ArgumentParser(prog="debaterl meter", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+  ap = argparse.ArgumentParser(prog="resips meter", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
   ap.add_argument("cmd", choices=("serve", "budget"))
   ap.add_argument("state", nargs="?")
   ap.add_argument("--names", default="yes,no")

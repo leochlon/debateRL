@@ -1,5 +1,5 @@
 [project]
-name = "debateRL"
+name = "resips"
 version = "0.1.0"
 description = "Physics judges for design debates between AI agents: OpenCASCADE geometry, MuJoCo, ngspice and CalculiX"
 readme = "README.md"
@@ -10,16 +10,16 @@ requires-python = ">=3.12"
 dependencies = ["anthropic", "build123d", "gmsh", "mujoco", "numpy>=2", "scipy"]
 
 [project.scripts]
-debaterl = "debaterl.__main__:main"
+resips = "resips.__main__:main"
 
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = {"debaterl" = "."}  # the repository root is the package
-packages = ["debaterl", "debaterl.cad", "debaterl.chip"]
-package-data = {"debaterl.cad" = ["*.json"]}
+package-dir = {"resips" = "."}  # the repository root is the package
+packages = ["resips", "resips.cad", "resips.chip"]
+package-data = {"resips.cad" = ["*.json"]}
 
 [tool.ruff]
 indent-width = 2
